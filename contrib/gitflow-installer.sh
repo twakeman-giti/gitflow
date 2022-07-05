@@ -22,7 +22,7 @@ fi
 
 EXEC_FILES="git-flow"
 SCRIPT_FILES="git-flow-init git-flow-feature git-flow-hotfix git-flow-release git-flow-support git-flow-version gitflow-common gitflow-shFlags"
-SUBMODULE_FILE="gitflow-shFlags"
+SUBMODULE_FILE="shFlags"
 
 echo "### gitflow no-make installer ###"
 
@@ -59,12 +59,19 @@ case "$1" in
 		if [ -f "$REPO_NAME/$SUBMODULE_FILE" ] ; then
 			echo "Submodules look up to date"
 		else
-			echo "Updating submodules"
-			lastcwd=$PWD
-			cd "$REPO_NAME"
+			pushd $REPO_NAME
+			if [[ ! -z $SUBMODULE_FILE ]];
+			then
+				echo "Removing bad submodule URL"
+				git rm $SUBMODULE_FILE
+			fi
+			echo "Adding Submodule: $SUBMODULE_FILE"
+			git submodule add https://github.com/nvie/shFlags.git
+			pushd $SUBMODULE_NAME
 			git submodule init
 			git submodule update
-			cd "$lastcwd"
+			popd
+			popd
 		fi
 		install -v -d -m 0755 "$INSTALL_PREFIX"
 		for exec_file in $EXEC_FILES ; do
