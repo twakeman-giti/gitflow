@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # git-flow make-less installer for *nix systems, by Rick Osborne
@@ -12,6 +13,10 @@ if [ -z "$INSTALL_PREFIX" ] ; then
 	INSTALL_PREFIX="/usr/local/bin"
 fi
 
+if [ -z "$INSTALL_TMP" ] ; then
+    INSTALL_TMP="/tmp/gitflow"
+fi
+
 if [ -z "$REPO_NAME" ] ; then
 	REPO_NAME="gitflow"
 fi
@@ -22,7 +27,7 @@ fi
 
 EXEC_FILES="git-flow"
 SCRIPT_FILES="git-flow-init git-flow-feature git-flow-hotfix git-flow-release git-flow-support git-flow-version gitflow-common gitflow-shFlags"
-SUBMODULE_FILE="gitflow-shFlags"
+SUBMODULE_FILE="shFlags"
 
 echo "### gitflow no-make installer ###"
 
@@ -50,22 +55,35 @@ case "$1" in
 		;;
 	*)
 		echo "Installing git-flow to $INSTALL_PREFIX"
-		if [ -d "$REPO_NAME" -a -d "$REPO_NAME/.git" ] ; then
+        if [ ! -d "$INSTALL_TMP" ] ; then
+            echo "Creating tmp dir for gitflow install"
+            mkdir -pv $INSTALL_TMP
+        fi
+        pushd $INSTALL_TMP
+        echo "$PWD"
+		if [ -d "$INSTALL_TMP/$REPO_NAME" -a -d "$INSTALL_TMP/$REPO_NAME/.git" ] ; then
 			echo "Using existing repo: $REPO_NAME"
 		else
-			echo "Cloning repo from GitHub to $REPO_NAME"
-			git clone "$REPO_HOME" "$REPO_NAME"
+			echo "Cloning repo from GitHub to $INSTALL_TMP/$REPO_NAME"
+			git clone "$REPO_HOME" "$INSTALL_TMP/$REPO_NAME"
 		fi
-		if [ -f "$REPO_NAME/$SUBMODULE_FILE" ] ; then
+		if [ -f "$INSTALL_TMP/$REPO_NAME/$SUBMODULE_FILE" ] ; then
 			echo "Submodules look up to date"
 		else
-			echo "Updating submodules"
-			lastcwd=$PWD
-			cd "$REPO_NAME"
+			pushd $INSTALL_TMP/$REPO_NAME
+			if [[ ! -z "$INSTALL_TMP/$SUBMODULE_FILE" ]];
+			then
+				echo "Removing bad submodule URL"
+				git rm $INSTALL_TMP/$SUBMODULE_FILE
+			fi
+			echo "Adding Submodule: $INSTALL_TMP/$SUBMODULE_FILE"
+			git submodule add https://github.com/nvie/shFlags.git
+			pushd $INSTALL_TMP/$REPO_NAME/$SUBMODULE_NAME
 			git submodule init
 			git submodule update
-			cd "$lastcwd"
-		fi
+			popd #SUBMODULE_FILE
+			popd #REPO_NAME
+        fi
 		install -v -d -m 0755 "$INSTALL_PREFIX"
 		for exec_file in $EXEC_FILES ; do
 			install -v -m 0755 "$REPO_NAME/$exec_file" "$INSTALL_PREFIX"
@@ -73,6 +91,7 @@ case "$1" in
 		for script_file in $SCRIPT_FILES ; do
 			install -v -m 0644 "$REPO_NAME/$script_file" "$INSTALL_PREFIX"
 		done
+        popd #$INSTALL_TMP
 		exit
 		;;
 esac
